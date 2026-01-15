@@ -1,58 +1,42 @@
 import tl = require("azure-pipelines-task-lib/task");
-import { StoreApis, EnvVariablePrefix } from "./store_apis";
+import { StoreApis } from "./store_apis";
 
 (async function main() {
   const storeApis = new StoreApis();
 
   try {
     const command = tl.getInput("command");
+    
+    // Load credentials and configuration for all commands except configure
+    if (command !== "configure") {
+      // Get credentials from inputs (optional for DefaultAzureCredential)
+      const tenantId = tl.getInput("tenantId");
+      const clientId = tl.getInput("clientId");
+      const clientSecret = tl.getInput("clientSecret");
+      
+      // Get product configuration
+      const productId = tl.getInput("productId");
+      const sellerId = tl.getInput("sellerId");
+      
+      // Set credentials if provided
+      if (tenantId) storeApis.tenantId = tenantId;
+      if (clientId) storeApis.clientId = clientId;
+      if (clientSecret) storeApis.clientSecret = clientSecret;
+      
+      // Set product configuration if provided
+      if (productId) storeApis.productId = productId;
+      if (sellerId) storeApis.sellerId = sellerId;
+      
+      // Initialize authentication
+      await storeApis.InitAsync();
+    }
+    
     switch (command) {
       case "configure": {
-        storeApis.productId = tl.getInput("productId") || "";
-        storeApis.sellerId = tl.getInput("sellerId") || "";
-        storeApis.tenantId = tl.getInput("tenantId") || "";
-        storeApis.clientId = tl.getInput("clientId") || "";
-        storeApis.clientSecret = tl.getInput("clientSecret") || "";
-
-        await storeApis.InitAsync();
-
-        tl.setVariable(
-          `${EnvVariablePrefix}product_id`,
-          storeApis.productId,
-          true,
-          true
+        tl.setResult(
+          tl.TaskResult.Failed,
+          `The 'configure' command has been deprecated. Please provide credentials and configuration directly in the 'update' or 'publish' commands using the 'productId', 'sellerId', 'tenantId', 'clientId', and 'clientSecret' inputs. If 'tenantId', 'clientId', and 'clientSecret' are not provided, DefaultAzureCredential will be used for authentication.`
         );
-        tl.setVariable(
-          `${EnvVariablePrefix}seller_id`,
-          storeApis.sellerId,
-          true,
-          true
-        );
-        tl.setVariable(
-          `${EnvVariablePrefix}tenant_id`,
-          storeApis.tenantId,
-          true,
-          true
-        );
-        tl.setVariable(
-          `${EnvVariablePrefix}client_id`,
-          storeApis.clientId,
-          true,
-          true
-        );
-        tl.setVariable(
-          `${EnvVariablePrefix}client_secret`,
-          storeApis.clientSecret,
-          true,
-          true
-        );
-        tl.setVariable(
-          `${EnvVariablePrefix}access_token`,
-          storeApis.accessToken,
-          true,
-          true
-        );
-
         break;
       }
 
