@@ -1,5 +1,5 @@
 import * as core from "@actions/core";
-import { StoreApis, EnvVariablePrefix } from "./store_apis";
+import { StoreApis } from "./store_apis";
 
 (async function main() {
   const storeApis = new StoreApis();
