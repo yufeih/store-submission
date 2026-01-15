@@ -412,8 +412,18 @@ class StoreApis {
     }
     GetAccessToken() {
         return __awaiter(this, void 0, void 0, function* () {
-            // If client credentials are provided, use them for authentication
-            if (this.clientId && this.clientSecret && this.tenantId) {
+            // Check if we have all or none of the client credentials
+            const hasClientId = !!this.clientId;
+            const hasClientSecret = !!this.clientSecret;
+            const hasTenantId = !!this.tenantId;
+            // If any credential is provided, all three must be provided
+            if (hasClientId || hasClientSecret || hasTenantId) {
+                if (!hasClientId || !hasClientSecret || !hasTenantId) {
+                    const errorMessage = "When providing explicit credentials, all three parameters (tenant-id, client-id, client-secret) must be provided. " +
+                        "To use DefaultAzureCredential, omit all three credential parameters.";
+                    return Promise.reject(errorMessage);
+                }
+                // Use client credentials flow
                 const requestParameters = {
                     grant_type: "client_credentials",
                     client_id: this.clientId,
