@@ -8,7 +8,7 @@ This is a GitHub Action to update EXE and MSI apps in the Microsoft Store.
 
 2. [Install](https://aka.ms/store-submission) the extension.
 
-3. [Obtain](#obtaining-your-credentials) and [configure](#configuring-your-credentials) your Partner Center credentials.
+3. Set up authentication using either [DefaultAzureCredential](#authentication-with-defaultazurecredential-recommended) (recommended) or [traditional credentials](#authentication-with-explicit-credentials).
 
 4. [Add tasks](#task-reference) to your release definitions.
 
@@ -24,7 +24,23 @@ This is a GitHub Action to update EXE and MSI apps in the Microsoft Store.
 
 5. More information and extra prerequisites specific to the API can be found [here](https://msdn.microsoft.com/windows/uwp/monetize/create-and-manage-submissions-using-windows-store-services).
 
-## Obtaining your credentials
+## Authentication
+
+### Authentication with DefaultAzureCredential (Recommended)
+
+The extension now supports passwordless authentication using Azure's DefaultAzureCredential. This is the recommended approach as it automatically uses credentials from your Azure CLI login or managed identity.
+
+To use this method:
+
+1. In your GitHub Actions workflow, use the [azure/login](https://github.com/Azure/login) action before calling this action
+2. Do not provide `tenant-id`, `client-id`, or `client-secret` inputs
+3. The action will automatically use the credentials from the Azure login
+
+This approach is more secure and eliminates the need to store client secrets.
+
+### Authentication with Explicit Credentials
+
+If you prefer to use explicit credentials or cannot use DefaultAzureCredential, you can still provide the traditional credentials.
 
 Your credentials are comprised of three parts: the Azure **Tenant ID**, the **Client ID** and the **Client secret**.
 Follow these steps to obtain them:
@@ -55,7 +71,9 @@ The Product ID can be found by navigating to the overview of your application in
 
 This action allows you to publish your app on the Store by creating a submission in Partner Center.
 
-## Sample
+## Sample Usage
+
+### Using DefaultAzureCredential (Recommended)
 
 ```yml
 name: CI
@@ -70,25 +88,62 @@ jobs:
   start-store-submission:
     runs-on: ubuntu-latest
     steps:
-      - name: Configure Store Credentials
-        uses: microsoft/store-submission@v1
+      - name: Azure Login
+        uses: azure/login@v1
         with:
-          command: configure
-          type: win32
-          seller-id: ${{ secrets.SELLER_ID }}
-          product-id: ${{ secrets.PRODUCT_ID }}
-          tenant-id: ${{ secrets.TENANT_ID }}
-          client-id: ${{ secrets.CLIENT_ID }}
-          client-secret: ${{ secrets.CLIENT_SECRET }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Update Draft Submission
         uses: microsoft/store-submission@v1
         with:
           command: update
+          type: win32
+          seller-id: ${{ secrets.SELLER_ID }}
+          product-id: ${{ secrets.PRODUCT_ID }}
           product-update: '{"packages":[{"packageUrl":"https://cdn.contoso.us/prod/5.10.1.4420/ContosoIgniteInstallerFull.msi","languages":["en"],"architectures":["X64"],"isSilentInstall":true}]}'
 
       - name: Publish Submission
         uses: microsoft/store-submission@v1
         with:
           command: publish
+          seller-id: ${{ secrets.SELLER_ID }}
+          product-id: ${{ secrets.PRODUCT_ID }}
+```
+
+### Using Explicit Credentials
+
+```yml
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  start-store-submission:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update Draft Submission
+        uses: microsoft/store-submission@v1
+        with:
+          command: update
+          type: win32
+          seller-id: ${{ secrets.SELLER_ID }}
+          product-id: ${{ secrets.PRODUCT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          client-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
+          product-update: '{"packages":[{"packageUrl":"https://cdn.contoso.us/prod/5.10.1.4420/ContosoIgniteInstallerFull.msi","languages":["en"],"architectures":["X64"],"isSilentInstall":true}]}'
+
+      - name: Publish Submission
+        uses: microsoft/store-submission@v1
+        with:
+          command: publish
+          seller-id: ${{ secrets.SELLER_ID }}
+          product-id: ${{ secrets.PRODUCT_ID }}
+          tenant-id: ${{ secrets.TENANT_ID }}
+          client-id: ${{ secrets.CLIENT_ID }}
+          client-secret: ${{ secrets.CLIENT_SECRET }}
 ```

@@ -10,23 +10,23 @@ inputs:
     required: false
     default: 'packaged'
   command:
-    description: 'The command to execute. Available command: `configure`, `get`, `update`, `poll`, or `publish`.'
+    description: 'The command to execute. Available command: `get`, `update`, `poll`, or `publish`. Note: The `configure` command has been deprecated - provide credentials directly in other commands.'
     required: false
-    default: 'configure'
+    default: 'update'
   seller-id:
-    description: 'Seller Id'
+    description: 'Seller Id. Required for update and publish commands.'
     required: false
   product-id:
-    description: 'Product Id'
+    description: 'Product Id. Required for update and publish commands.'
     required: false
   tenant-id:
-    description: 'AAD Tenant Id'
+    description: 'AAD Tenant Id. Optional - if not provided along with client-id and client-secret, DefaultAzureCredential will be used for authentication.'
     required: false
   client-id:
-    description: 'App Client Id'
+    description: 'App Client Id. Optional - if not provided along with tenant-id and client-secret, DefaultAzureCredential will be used for authentication.'
     required: false
   client-secret:
-    description: 'App Client secret'
+    description: 'App Client secret. Optional - if not provided along with tenant-id and client-id, DefaultAzureCredential will be used for authentication.'
     required: false
   module-name:
     description: 'Indicates which module should be queried from the current draft (listing, properties or availability)'

@@ -1,4 +1,5 @@
 import * as https from "https";
+import { DefaultAzureCredential } from "@azure/identity";
 
 export const EnvVariablePrefix = "MICROSOFT_STORE_ACTION_";
 
@@ -77,7 +78,13 @@ export class StoreApis {
   private static readonly storeApiUrl = "api.store.microsoft.com";
 
   constructor() {
-    this.LoadState();
+    // Initialize with empty values - credentials will be set by the action/task
+    this.productId = "";
+    this.sellerId = "";
+    this.tenantId = "";
+    this.clientId = "";
+    this.clientSecret = "";
+    this.accessToken = "";
   }
 
   public accessToken: string;
@@ -92,55 +99,64 @@ export class StoreApis {
   }
 
   private async GetAccessToken(): Promise<string> {
-    const requestParameters: { [key: string]: string } = {
-      grant_type: "client_credentials",
-      client_id: this.clientId,
-      client_secret: this.clientSecret,
-      scope: StoreApis.scope,
-    };
+    // If client credentials are provided, use them for authentication
+    if (this.clientId && this.clientSecret && this.tenantId) {
+      const requestParameters: { [key: string]: string } = {
+        grant_type: "client_credentials",
+        client_id: this.clientId,
+        client_secret: this.clientSecret,
+        scope: StoreApis.scope,
+      };
 
-    const formBody = [];
-    for (const property in requestParameters) {
-      const encodedKey = encodeURIComponent(property);
-      const encodedValue = encodeURIComponent(requestParameters[property]);
-      formBody.push(encodedKey + "=" + encodedValue);
+      const formBody = [];
+      for (const property in requestParameters) {
+        const encodedKey = encodeURIComponent(property);
+        const encodedValue = encodeURIComponent(requestParameters[property]);
+        formBody.push(encodedKey + "=" + encodedValue);
+      }
+
+      const dataString = formBody.join("\r\n&");
+
+      const options: https.RequestOptions = {
+        host: StoreApis.microsoftOnlineLoginHost,
+        path: `/${this.tenantId}${StoreApis.authOAuth2TokenSuffix}`,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Length": dataString.length,
+        },
+      };
+
+      return new Promise<string>((resolve, reject) => {
+        const req = https.request(options, (res) => {
+          let responseString = "";
+
+          res.on("data", (data) => {
+            responseString += data;
+          });
+
+          res.on("end", function () {
+            const responseObject = JSON.parse(responseString);
+            if (responseObject.error) reject(responseObject);
+            else resolve(responseObject.access_token);
+          });
+        });
+
+        req.on("error", (e) => {
+          console.error(e);
+          reject(e);
+        });
+
+        req.write(dataString);
+        req.end();
+      });
+    } else {
+      // Use DefaultAzureCredential for passwordless authentication
+      console.log("Using DefaultAzureCredential for authentication");
+      const credential = new DefaultAzureCredential();
+      const tokenResponse = await credential.getToken(StoreApis.scope);
+      return tokenResponse.token;
     }
-
-    const dataString = formBody.join("\r\n&");
-
-    const options: https.RequestOptions = {
-      host: StoreApis.microsoftOnlineLoginHost,
-      path: `/${this.tenantId}${StoreApis.authOAuth2TokenSuffix}`,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Content-Length": dataString.length,
-      },
-    };
-
-    return new Promise<string>((resolve, reject) => {
-      const req = https.request(options, (res) => {
-        let responseString = "";
-
-        res.on("data", (data) => {
-          responseString += data;
-        });
-
-        res.on("end", function () {
-          const responseObject = JSON.parse(responseString);
-          if (responseObject.error) reject(responseObject);
-          else resolve(responseObject.access_token);
-        });
-      });
-
-      req.on("error", (e) => {
-        console.error(e);
-        reject(e);
-      });
-
-      req.write(dataString);
-      req.end();
-    });
   }
 
   private GetCurrentDraftSubmissionPackagesData(): Promise<
@@ -561,14 +577,5 @@ export class StoreApis {
           );
         });
     });
-  }
-
-  private LoadState() {
-    this.productId = process.env[`${EnvVariablePrefix}product_id`] ?? "";
-    this.sellerId = process.env[`${EnvVariablePrefix}seller_id`] ?? "";
-    this.tenantId = process.env[`${EnvVariablePrefix}tenant_id`] ?? "";
-    this.clientId = process.env[`${EnvVariablePrefix}client_id`] ?? "";
-    this.clientSecret = process.env[`${EnvVariablePrefix}client_secret`] ?? "";
-    this.accessToken = process.env[`${EnvVariablePrefix}access_token`] ?? "";
   }
 }

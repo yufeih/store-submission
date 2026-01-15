@@ -6,47 +6,36 @@ import { StoreApis, EnvVariablePrefix } from "./store_apis";
 
   try {
     const command = core.getInput("command");
+    
+    // Load credentials and configuration for all commands except configure
+    if (command !== "configure") {
+      // Get credentials from inputs (optional for DefaultAzureCredential)
+      const tenantId = core.getInput("tenant-id");
+      const clientId = core.getInput("client-id");
+      const clientSecret = core.getInput("client-secret");
+      
+      // Get product configuration
+      const productId = core.getInput("product-id");
+      const sellerId = core.getInput("seller-id");
+      
+      // Set credentials if provided
+      if (tenantId) storeApis.tenantId = tenantId;
+      if (clientId) storeApis.clientId = clientId;
+      if (clientSecret) storeApis.clientSecret = clientSecret;
+      
+      // Set product configuration if provided
+      if (productId) storeApis.productId = productId;
+      if (sellerId) storeApis.sellerId = sellerId;
+      
+      // Initialize authentication
+      await storeApis.InitAsync();
+    }
+    
     switch (command) {
       case "configure": {
-        storeApis.productId = core.getInput("product-id");
-        storeApis.sellerId = core.getInput("seller-id");
-        storeApis.tenantId = core.getInput("tenant-id");
-        storeApis.clientId = core.getInput("client-id");
-        storeApis.clientSecret = core.getInput("client-secret");
-
-        await storeApis.InitAsync();
-
-        core.exportVariable(
-          `${EnvVariablePrefix}product_id`,
-          storeApis.productId
+        core.setFailed(
+          `The 'configure' command has been deprecated. Please provide credentials and configuration directly in the 'update' or 'publish' commands using the 'product-id', 'seller-id', 'tenant-id', 'client-id', and 'client-secret' inputs. If 'tenant-id', 'client-id', and 'client-secret' are not provided, DefaultAzureCredential will be used for authentication.`
         );
-        core.exportVariable(
-          `${EnvVariablePrefix}seller_id`,
-          storeApis.sellerId
-        );
-        core.exportVariable(
-          `${EnvVariablePrefix}tenant_id`,
-          storeApis.tenantId
-        );
-        core.exportVariable(
-          `${EnvVariablePrefix}client_id`,
-          storeApis.clientId
-        );
-        core.exportVariable(
-          `${EnvVariablePrefix}client_secret`,
-          storeApis.clientSecret
-        );
-        core.exportVariable(
-          `${EnvVariablePrefix}access_token`,
-          storeApis.accessToken
-        );
-        core.setSecret(storeApis.productId);
-        core.setSecret(storeApis.sellerId);
-        core.setSecret(storeApis.tenantId);
-        core.setSecret(storeApis.clientId);
-        core.setSecret(storeApis.clientSecret);
-        core.setSecret(storeApis.accessToken);
-
         break;
       }
 
